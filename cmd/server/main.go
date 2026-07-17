@@ -10,6 +10,7 @@ import (
 
 func main() {
     fmt.Println("Welcome to Cache Server.")
+	cacheServer := cache.NewCache()
 
     for {
         fmt.Println("Select ur Option: ")
@@ -24,7 +25,12 @@ func main() {
             keyReader := bufio.NewReader(os.Stdin)
             key, _ := keyReader.ReadString('\n')
             key = strings.TrimSpace(key)
-            cache.GET(key)
+            exists, value := cacheServer.Get(key)
+			if exists{
+				fmt.Println(value)
+			}else{
+				fmt.Println("No such key found!")
+			}
 
         case "set":
             fmt.Println("Insert your key")
@@ -37,14 +43,14 @@ func main() {
             val, _ := valReader.ReadString('\n')
             val = strings.TrimSpace(val)
 
-            cache.SET(key, val)
+            cacheServer.Set(key, val)
 
         case "del":
             fmt.Println("Insert your key")
             keyReader := bufio.NewReader(os.Stdin)
             key, _ := keyReader.ReadString('\n')
             key = strings.TrimSpace(key)
-            cache.DEL(key)
+            cacheServer.Del(key)
 
         default:
             return

@@ -1,26 +1,50 @@
 package cache
 
-import "fmt"
+import (
+	// "fmt"
+	"sync"
+)
 
 var cache map[string]string = make(map[string]string)
 
-func SET(key string, val string){
-
-	cache[key] = val
-	fmt.Printf("Set Value of %s: %s\n", key, val)
+type Entry struct{
+	value string
 }
 
-func GET(key string){
-	val, ok := cache[key]
-	if ok {
-		fmt.Println(val)
-	}else{
-		fmt.Println("not initialized")
+type Cache struct{
+	storage map[string]string
+	lock sync.RWMutex
+}
+
+func NewCache() *Cache{
+
+	return &Cache{
+		storage: make(map[string]string),
 	}
-
 }
 
-func DEL(key string){
+func (cache *Cache)Set(key string, val string){
 
-	delete(cache, key)
+	cache.lock.Lock()
+	defer cache.lock.Unlock()
+
+	cache.storage[key] = val
+}
+
+func (cache *Cache)Get(key string) (bool, string){
+
+	cache.lock.RLock()
+	defer cache.lock.RUnlock()
+
+	val, ok := cache.storage[key]
+
+	return ok, val
+}
+
+func (cache *Cache)Del(key string){
+
+	cache.lock.Lock()
+	defer cache.lock.Unlock()
+
+	delete(cache.storage, key)
 }
