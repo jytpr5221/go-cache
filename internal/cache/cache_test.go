@@ -2,60 +2,66 @@ package cache
 
 import (
 	"testing"
+	"time"
 )
 
-func TestSetGet(t *testing.T) {
+func TestSetAndGet(t *testing.T) {
 	cache := NewCache()
 
-	cache.Set("user1", "jyoti")
+	cache.Set("name", "jp", 10)
 
-	found, val := cache.Get("user1")
+	ok, value := cache.Get("name")
 
-	if !found {
+	if !ok {
 		t.Fatal("expected key to exist")
 	}
 
-	if val != "jyoti" {
-		t.Fatalf("expected jyoti, got %s", val)
-	}
-}
-
-func TestMissingKey(t *testing.T) {
-	cache := NewCache()
-
-	found, _ := cache.Get("missing")
-
-	if found {
-		t.Fatal("expected key to not exist")
+	if value != "jp" {
+		t.Fatalf("expected value 'jp', got '%s'", value)
 	}
 }
 
 func TestDelete(t *testing.T) {
 	cache := NewCache()
 
-	cache.Set("user1", "jyoti")
-	cache.Del("user1")
+	cache.Set("name", "jp", 10)
 
-	found, _ := cache.Get("user1")
+	cache.Del("name")
 
-	if found {
+	ok, _ := cache.Get("name")
+
+	if ok {
 		t.Fatal("expected key to be deleted")
 	}
 }
 
-func TestOverwrite(t *testing.T) {
+func TestTTLExpiration(t *testing.T) {
 	cache := NewCache()
 
-	cache.Set("user1", "old")
-	cache.Set("user1", "new")
+	cache.Set("temp", "data", 1)
 
-	found, val := cache.Get("user1")
+	time.Sleep(2 * time.Second)
 
-	if !found {
+	ok, _ := cache.Get("temp")
+
+	if ok {
+		t.Fatal("expected key to expire")
+	}
+}
+
+func TestOverwriteKey(t *testing.T) {
+	cache := NewCache()
+
+	cache.Set("name", "jp", 10)
+	cache.Set("name", "john", 10)
+
+	ok, value := cache.Get("name")
+
+	if !ok {
 		t.Fatal("expected key to exist")
 	}
 
-	if val != "new" {
-		t.Fatalf("expected new, got %s", val)
+	if value != "john" {
+		t.Fatalf("expected updated value 'john', got '%s'", value)
 	}
 }

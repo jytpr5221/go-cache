@@ -43,7 +43,7 @@ func main() {
             val, _ := valReader.ReadString('\n')
             val = strings.TrimSpace(val)
 
-            cacheServer.Set(key, val)
+            cacheServer.Set(key, val, 10)
 
         case "del":
             fmt.Println("Insert your key")
