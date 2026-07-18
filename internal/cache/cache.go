@@ -1,66 +1,92 @@
 package cache
 
-import (
-	"sync"
-	"time"
-)
+import "time"
 
-type Entry struct {
-	value string
-	ttl   time.Time 
-	//TODO: for future extension: add a heap based ttlTracker, that keeps entries in exprationTime order and then removes them in order.
-}
+const MAX_CACHE_SIZE = 3
 
-type Cache struct {
-	storage map[string]Entry
-	lock    sync.RWMutex
-}
-
-func NewCache() *Cache {
-	return &Cache{
-		storage: make(map[string]Entry),
+func NewCache(policy EvictionPolicy) *Cache {
+	if policy == LRU{
+	    return NewCacheWithEviction(NewLRUEviction())
+	}else if policy == LFU{
+		return NewCacheWithEviction((NewLFUEviction()))
 	}
+
+	return NewCacheWithEviction(NewLRUEviction())
+}
+
+func NewCacheWithEviction(eviction Eviction) *Cache {
+    if eviction == nil {
+        eviction = NewLRUEviction()
+    }
+
+    return &Cache{
+        storage:  make(map[string]Entry),
+        eviction: eviction,
+    }
 }
 
 func (cache *Cache) Set(key string, val string, ttl uint) {
-	cache.lock.Lock()
-	defer cache.lock.Unlock()
+    cache.lock.Lock()
+    defer cache.lock.Unlock()
 
-	expiry := time.Now().Add(time.Duration(ttl) * time.Second)
+    expiry := time.Now().Add(time.Duration(ttl) * time.Second)
 
-	cache.storage[key] = Entry{
-		value: val,
-		ttl:   expiry,
-	}
+    entry := cache.storage[key]
+    entry.value = val
+    entry.ttl = expiry
+
+    if cache.eviction != nil {
+        evictedKey, evicted := cache.eviction.OnSet(key, &entry.metadata)
+        cache.storage[key] = entry
+
+        if evicted {
+            delete(cache.storage, evictedKey)
+        }
+        return
+    }
+
+    cache.storage[key] = entry
 }
 
-func (cache *Cache) Get(key string) (bool, string) {
-	cache.lock.RLock()
+func (cache *Cache) Get(key string) (string, bool) {
+    cache.lock.Lock()
+    defer cache.lock.Unlock()
 
-	entry, ok := cache.storage[key]
-	if !ok {
-		cache.lock.RUnlock()
-		return false, ""
-	}
+    entry, ok := cache.storage[key]
+    if !ok {
+        return "", false
+    }
 
-	// Lazy expiration
-	if time.Now().After(entry.ttl) {
-		cache.lock.RUnlock()
+    if time.Now().After(entry.ttl) {
+        delete(cache.storage, key)
 
-		cache.Del(key)
+        if cache.eviction != nil {
+            cache.eviction.OnDel(key, &entry.metadata)
+        }
 
-		return false, ""
-	}
+        return "", false
+    }
 
-	value := entry.value
-	cache.lock.RUnlock()
+    if cache.eviction != nil {
+        cache.eviction.OnGet(key, &entry.metadata)
+        cache.storage[key] = entry
+    }
 
-	return true, value
+    return entry.value, true
 }
 
 func (cache *Cache) Del(key string) {
-	cache.lock.Lock()
-	defer cache.lock.Unlock()
+    cache.lock.Lock()
+    defer cache.lock.Unlock()
 
-	delete(cache.storage, key)
+    entry, ok := cache.storage[key]
+    if !ok {
+        return
+    }
+
+    delete(cache.storage, key)
+
+    if cache.eviction != nil {
+        cache.eviction.OnDel(key, &entry.metadata)
+    }
 }

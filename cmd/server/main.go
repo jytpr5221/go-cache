@@ -1,59 +1,71 @@
 package main
 
 import (
-    "bufio"
-    "fmt"
-    "os"
-    "predictive-cache/internal/cache"
-    "strings"
+	"bufio"
+	"fmt"
+    "strconv"
+	"os"
+	"predictive-cache/internal/cache"
+	"strings"
 )
 
 func main() {
+
+
     fmt.Println("Welcome to Cache Server.")
-	cacheServer := cache.NewCache()
+    fmt.Println("Enter your eviction policy")
 
+    policyReader := bufio.NewReader(os.Stdin)
+    policy, _ := policyReader.ReadString('\n')
+    intPolicy, _ := strconv.Atoi(strings.TrimSpace(policy))
+
+    c := cache.NewCache(cache.EvictionPolicy(intPolicy))
     for {
-        fmt.Println("Select ur Option: ")
-
+        fmt.Println("Select your option: ")
         reader := bufio.NewReader(os.Stdin)
         input, _ := reader.ReadString('\n')
-        input = strings.TrimSpace(input)
+        input = strings.TrimSpace(strings.ToLower(input))
 
         switch input {
         case "get":
-            fmt.Println("Insert your key")
+            fmt.Println("Insert your key:")
             keyReader := bufio.NewReader(os.Stdin)
             key, _ := keyReader.ReadString('\n')
             key = strings.TrimSpace(key)
-            exists, value := cacheServer.Get(key)
-			if exists{
-				fmt.Println(value)
-			}else{
-				fmt.Println("No such key found!")
-			}
+
+            value, ok := c.Get(key)
+            if ok {
+                fmt.Println(value)
+            } else {
+                fmt.Println("not found")
+            }
 
         case "set":
-            fmt.Println("Insert your key")
+            fmt.Println("Insert your key:")
             keyReader := bufio.NewReader(os.Stdin)
             key, _ := keyReader.ReadString('\n')
             key = strings.TrimSpace(key)
 
-            fmt.Println("Insert your value")
+            fmt.Println("Insert your value:")
             valReader := bufio.NewReader(os.Stdin)
             val, _ := valReader.ReadString('\n')
             val = strings.TrimSpace(val)
 
-            cacheServer.Set(key, val, 10)
+            c.Set(key, val, 60)
 
         case "del":
-            fmt.Println("Insert your key")
+            fmt.Println("Insert your key:")
             keyReader := bufio.NewReader(os.Stdin)
             key, _ := keyReader.ReadString('\n')
             key = strings.TrimSpace(key)
-            cacheServer.Del(key)
+
+            c.Del(key)
+
+        case "exit":
+            return
 
         default:
-            return
+            fmt.Println("valid commands: get, set, del, exit")
         }
     }
 }
