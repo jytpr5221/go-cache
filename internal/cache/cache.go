@@ -49,8 +49,8 @@ func (cache *Cache) Set(key string, val string, ttl uint) {
 }
 
 func (cache *Cache) Get(key string) (string, bool) {
-    cache.lock.Lock()
-    defer cache.lock.Unlock()
+    cache.lock.RLock()
+    defer cache.lock.RUnlock()
 
     entry, ok := cache.storage[key]
     if !ok {

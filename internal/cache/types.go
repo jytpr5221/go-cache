@@ -23,7 +23,7 @@ type Entry struct {
 
 type Cache struct {
 	storage  map[string]Entry
-	lock     sync.Mutex
+	lock     sync.RWMutex
 	eviction Eviction
 }
 
